@@ -60,12 +60,13 @@ usb=CustomBusinessDay(calender=USFederalHolidayCalendar())
 from pandas.tseries.holiday import  AbstractHolidayCalendar, nearest_workday, Holiday
 class myBirthdayCalendar(AbstractHolidayCalendar):
     rules = [
-        Holiday('Vikram pal Birthday', month=9, day=12)
+        Holiday('Vikram pal Birthday', month=9, day=7)
     ]
 
 
 myc=CustomBusinessDay(calendar=myBirthdayCalendar())
 
+rng=pd.date_range(start='6/1/2017', periods=72, freq=myc)
 
 
 
