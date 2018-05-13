@@ -69,6 +69,15 @@ myc=CustomBusinessDay(calendar=myBirthdayCalendar())
 rng=pd.date_range(start='6/1/2017', periods=72, freq=myc)
 
 
+# changing week days range such for Eygpht sunday is working day and fri and sat
+# are holiday
+b=CustomBusinessDay(weekmask='Sun Mon Tue Wed Thu')
+rng=pd.date_range(start='6/1/2017', periods=72, freq='B')
+
+
+
+
+
 
 
 
