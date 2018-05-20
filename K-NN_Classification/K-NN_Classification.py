@@ -24,10 +24,9 @@ X_test = sc_X.transform(X_test)
 
 
 
-#fitting logisitic regression to the training set
-from sklearn.linear_model import LogisticRegression
-classifier=LogisticRegression(random_state=0)
-
+#fitting the classifier to the training set
+from sklearn.neighbors import KNeighborsClassifier
+classifier= KNeighborsClassifier(n_neighbors=5, metric='minkowski',p=2)
 classifier.fit(X_train,y_train)
 
 
@@ -38,6 +37,7 @@ y_pred=classifier.predict(X_test)
 #making the confusion matrix
 from sklearn.metrics import confusion_matrix
 cm=confusion_matrix(y_test, y_pred)
+
 
 
 # Visualising the Training set results
