@@ -1,0 +1,15 @@
+global-include *.txt
+global-include *.c
+global-include *.cu
+global-include *.cuh
+global-include *.cpp
+global-include *.h
+global-include *.sh
+global-include *.pkl
+recursive-include doc
+include bin/theano-cache
+include bin/theano-nose
+prune .jenkins
+prune .travis
+include versioneer.py
+include theano/_version.py
