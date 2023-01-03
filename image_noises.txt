@@ -1,0 +1,35 @@
+Different Type of Image Noise:
+There are several types of image noise that can affect the quality of an image:
+•	Gaussian noise: This type of noise is characterized by a normal distribution of intensity values, resulting in a blurry or hazy appearance in the image.
+•	Salt-and-pepper noise: This type of noise is characterized by random white and black pixels scattered throughout the image. It can give the image a speckled or grainy appearance.
+•	Impulse noise: This type of noise is similar to salt-and-pepper noise, but the intensity values of the noisy pixels are not limited to black and white. Instead, they can take on any intensity value.
+•	Shot noise: This type of noise is caused by the random fluctuations of the number of photons that are detected by the image sensor. It can give the image a grainy appearance.
+•	Fixed-pattern noise: This type of noise is caused by a consistent, repeating pattern in the image sensor. It can give the image a mottled or striped appearance.
+•	Temperature noise: This type of noise is caused by fluctuations in the temperature of the image sensor. It can give the image a grainy appearance.
+•	Quantization noise: This type of noise is caused by the loss of information that occurs when an image is digitized and stored in a computer. It can give the image a blocky or pixelated appearance.
+
+There are several techniques that can be used to reduce or remove image noise, depending on the type and severity of the noise. Here are some examples of how to reduce noise in images in Python using the NumPy and SciPy libraries:
+
+Median filtering: This is a non-linear method that is effective at removing salt-and-pepper noise and other types of impulse noise. It works by replacing the intensity value of each pixel with the median value of the pixel and its neighbors.
+Copy code
+from scipy.ndimage import median_filter
+
+# Apply median filtering to the image
+filtered_image = median_filter(image, size=3)
+
+Gaussian filtering: This is a linear method that is effective at removing Gaussian noise and other types of low-frequency noise. It works by smoothing the image using a Gaussian function.
+
+Copy code
+from scipy.ndimage import gaussian_filter
+# Apply Gaussian filtering to the image
+filtered_image = gaussian_filter(image, sigma=1)
+
+Wiener filtering: This is a more advanced method that is effective at removing Gaussian noise and other types of low-frequency noise, as well as preserving edges in the image. It works by estimating the noise power spectrum and using it to reduce the noise in the image.
+
+Copy code
+from scipy.signal import wiener
+
+# Apply Wiener filtering to the image
+filtered_image = wiener(image, mysize=3)
+
+These are just a few examples of techniques that can be used to reduce image noise. There are many other methods available, such as wavelet denoising, total variation denoising, and non-local means denoising, which may be more or less effective depending on the specific characteristics of the noise and the image.
