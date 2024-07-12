@@ -1,0 +1,29 @@
+Sure, here is a table that summarizes the characteristics, functions, and optimization techniques of the Marlin kernel, the PagedAttention kernel, and a general CUDA kernel:
+
+| **Feature**            | **Marlin Kernel**                                  | **PagedAttention Kernel**                           | **General CUDA Kernel**                                |
+|------------------------|----------------------------------------------------|----------------------------------------------------|-------------------------------------------------------|
+| **Primary Function**   | Mixed-precision matrix multiplication (matmul)     | Matrix multiplication for attention mechanism       | General-purpose parallel computing                     |
+| **Optimization Focus** | FP16xINT4 operations                               | Efficient KV cache management in attention          | Varies depending on application                        |
+| **Memory Management**  | Asynchronous global weight loads, circular shared memory queue | Paged memory management for KV caches               | Uses global, shared, and register memory               |
+| **Key Techniques**     | - Asynchronous global weight loads<br>- Circular shared memory queue<br>- Stream-K parallelization<br>- L2 cache utilization<br>- Double buffering | - Paged memory management<br>- Fused reshape and block write<br>- Fused block read and attention<br>- Fused block copy<br>- Efficient memory access | - Coalesced memory access<br>- Thread and block synchronization<br>- Shared memory utilization<br>- Kernel fusion<br>- Memory caching |
+| **Performance**        | Near-ideal 4x speedups for batch sizes up to 32 tokens | 2-4x throughput improvement over state-of-the-art systems | Highly dependent on application and optimization      |
+| **Use Cases**          | - Large-scale LLM serving<br>- Speculative decoding<br>- Advanced multi-inference schemes<br>- Efficient linear transformations | - Efficient multi-head attention<br>- Large-scale language model queries<br>- Reducing computation bottlenecks in attention mechanisms<br>- Managing paged KV caches | - Scientific computing<br>- Image and signal processing<br>- Machine learning training and inference<br>- Simulation and modeling<br>- Parallel data processing |
+
+### Explanation
+
+**Marlin Kernel**:
+- **Primary Function**: Designed for mixed-precision matrix multiplications, specifically optimized for FP16xINT4 computations.
+- **Optimization Techniques**: Uses advanced techniques like asynchronous global weight loads and circular shared memory queues to maximize GPU utilization and minimize latency.
+- **Performance**: Achieves significant speedups, especially for batch sizes up to 32 tokens, making it ideal for large-scale LLM serving and speculative decoding.
+
+**PagedAttention Kernel**:
+- **Primary Function**: Focused on the attention mechanism in transformers, which involves matrix multiplications for computing attention scores.
+- **Optimization Techniques**: Implements paged memory management and fuses various operations to handle dynamic memory efficiently and reduce kernel launch overheads.
+- **Performance**: Improves throughput significantly by managing KV caches efficiently, suitable for scenarios requiring efficient multi-head attention and handling large language model queries.
+
+**General CUDA Kernel**:
+- **Primary Function**: General-purpose parallel computing, used across various applications requiring high-performance computations.
+- **Optimization Techniques**: Employs general optimization techniques like coalesced memory access, thread and block synchronization, and shared memory utilization to improve performance.
+- **Performance**: Varies widely depending on the specific application and the optimizations applied, used in fields ranging from scientific computing to machine learning.
+
+Each kernel is optimized for specific computational tasks, leveraging the capabilities of NVIDIA GPUs to enhance performance and efficiency in their respective domains.
