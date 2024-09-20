@@ -174,3 +174,18 @@ vLLM's combination of innovative memory management techniques, kernel-level opti
 ### Conclusion
 
 Prefix caching in vLLM is a powerful optimization technique that leverages the reuse of cached KV blocks for queries with shared prefixes. By managing KV blocks using a global hash table and implementing efficient eviction policies, vLLM can significantly improve the performance of large language model inference, making it faster and more efficient.
+
+
+
+QLoRA: Efficient Fine-Tuning with 4-bit Quantization (NF4)
+Overview:
+
+QLoRA enables fine-tuning of large models (up to 65B parameters) on a single 48GB GPU by using 4-bit NormalFloat (NF4) Quantization.
+Key Components:
+
+4-bit NormalFloat (NF4) Quantization: Optimally compresses model weights, minimizing memory usage without losing precision.
+Double Quantization: Further compresses quantization constants, saving additional memory.
+Paged Optimizers: Efficient memory management prevents out-of-memory errors by handling data spikes.
+Low-Rank Adapters (LoRA): Fine-tunes small, trainable parameters (adapters) while keeping the main model frozen.
+
+
