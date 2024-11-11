@@ -62,12 +62,31 @@ def create_subversion(word):
     selected_transformation = random.choice(transformations)
     return apply_subversion(word, selected_transformation)
 
-# Process a single sentence with only one transformation per word
+# Process a single sentence based on the number of words
 def process_sentence(sentence):
     words = sentence.split()
+    num_words = len(words)
     
+    # Determine the number of subversions to apply based on sentence length
+    if num_words <= 3:
+        num_subversions = 1
+    elif 3 < num_words <= 5:
+        num_subversions = 2
+    else:
+        num_subversions = 3
+    
+    # Select words that are in the dictionary and have a length of at least 3 characters
+    valid_words = [word for word in words if word in word_set and len(word) >= 3]
+    
+    # Randomly select words to apply transformations
+    if len(valid_words) >= num_subversions:
+        words_to_transform = random.sample(valid_words, num_subversions)
+    else:
+        words_to_transform = valid_words  # If fewer valid words, apply subversion to all of them
+
+    # Apply subversion only to the selected words
     transformed_words = [
-        create_subversion(word) if word in word_set else word
+        create_subversion(word) if word in words_to_transform else word
         for word in words
     ]
     return ' '.join(transformed_words)
