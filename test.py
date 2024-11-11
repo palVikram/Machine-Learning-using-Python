@@ -115,14 +115,17 @@ def process_sentences(sentences, start_index):
 
 def main():
     # Number of vCPUs available
-    vcpu_count = 100
-    chunk_size = len(sentences) // vcpu_count
+    vcpu_count = os.cpu_count() or 100  # Fallback to 100 if os.cpu_count() returns None
+    chunk_size = max(1, len(sentences) // vcpu_count)  # Ensure chunk_size is at least 1
 
     # Prepare chunks for each process
     sentence_chunks = [sentences[i:i + chunk_size] for i in range(0, len(sentences), chunk_size)]
 
+    # Limit the number of processes to the number of chunks
+    process_count = min(vcpu_count, len(sentence_chunks))
+
     # Initialize multiprocessing pool
-    with mp.Pool(processes=vcpu_count) as pool:
+    with mp.Pool(processes=process_count) as pool:
         results = pool.starmap(process_sentences, [(chunk, i * chunk_size) for i, chunk in enumerate(sentence_chunks)])
 
     # Flatten the list of results
