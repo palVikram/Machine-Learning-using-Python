@@ -14,45 +14,44 @@ special_characters = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|
 
 # Function to apply transformations
 def apply_subversion(word, transformation):
+    word_list = list(word)  # Initialize word_list from word at the beginning
+
     if transformation == 'replace':
-        replace_index = random.randint(0, len(word) - 1)
-        word_list = list(word)
+        replace_index = random.randint(0, len(word_list) - 1)
         # Replace with neighboring character in alphabetical order or keyboard layout
         word_list[replace_index] = chr(((ord(word_list[replace_index]) - 97 + 1) % 26) + 97)
         return ''.join(word_list)
 
     elif transformation == 'add':
-        add_index = random.randint(0, len(word))
-        word_list = list(word)
+        add_index = random.randint(0, len(word_list))
         word_list.insert(add_index, random.choice(special_characters))
         return ''.join(word_list)
 
     elif transformation == 'remove':
-        if len(word) > 1:
-            remove_index = random.randint(0, len(word) - 1)
+        if len(word_list) > 1:  # Check to avoid empty list error
+            remove_index = random.randint(0, len(word_list) - 1)
             word_list.pop(remove_index)
-            return ''.join(word_list)
-        return word
+        return ''.join(word_list)
 
     elif transformation == 'shuffle_two':
-        word_list = list(word)
-        idx1, idx2 = random.sample(range(len(word_list)), 2)
-        word_list[idx1], word_list[idx2] = word_list[idx2], word_list[idx1]
+        if len(word_list) >= 2:
+            idx1, idx2 = random.sample(range(len(word_list)), 2)
+            word_list[idx1], word_list[idx2] = word_list[idx2], word_list[idx1]
         return ''.join(word_list)
 
     elif transformation == 'shuffle_three':
-        word_list = list(word)
-        idx1, idx2, idx3 = random.sample(range(len(word_list)), 3)
-        word_list[idx1], word_list[idx2], word_list[idx3] = word_list[idx2], word_list[idx3], word_list[idx1]
+        if len(word_list) >= 3:
+            idx1, idx2, idx3 = random.sample(range(len(word_list)), 3)
+            word_list[idx1], word_list[idx2], word_list[idx3] = word_list[idx2], word_list[idx3], word_list[idx1]
         return ''.join(word_list)
 
     elif transformation == 'add_xxxx':
         return word + "XXXX"
 
     elif transformation == 'repeat_character':
-        repeat_index = random.randint(0, len(word) - 1)
-        char_to_repeat = word[repeat_index]
-        return word[:repeat_index] + char_to_repeat * random.randint(2, 5) + word[repeat_index + 1:]
+        repeat_index = random.randint(0, len(word_list) - 1)
+        char_to_repeat = word_list[repeat_index]
+        return ''.join(word_list[:repeat_index] + [char_to_repeat * random.randint(2, 5)] + word_list[repeat_index + 1:])
 
     return word
 
