@@ -12,7 +12,7 @@ sentences = ["This is an example sentence", "Another dictionary sentence with wo
 # Define the special characters pool
 special_characters = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:'\",.<>?/~`"
 
-# Function to apply transformations
+# Function to apply a single transformation
 def apply_subversion(word, transformation):
     word_list = list(word)  # Initialize word_list from word at the beginning
 
@@ -56,30 +56,18 @@ def apply_subversion(word, transformation):
 
     return word
 
-# Rule-based function to apply subversions to a word
-def create_subversion(word, num_subversions):
+# Function to apply a single random subversion to a word
+def create_subversion(word):
     transformations = ['replace', 'add', 'remove', 'shuffle_two', 'shuffle_three', 'add_xxxx', 'repeat_character']
-    selected_transformations = random.sample(transformations, num_subversions)
-    modified_word = word
-    for transformation in selected_transformations:
-        modified_word = apply_subversion(modified_word, transformation)
-    return modified_word
+    selected_transformation = random.choice(transformations)
+    return apply_subversion(word, selected_transformation)
 
-# Process a single sentence
+# Process a single sentence with only one transformation per word
 def process_sentence(sentence):
     words = sentence.split()
-    num_words = len(words)
-    
-    # Determine the number of subversions to apply based on sentence length
-    if num_words <= 3:
-        num_subversions = 1
-    elif 3 < num_words <= 5:
-        num_subversions = 2
-    else:
-        num_subversions = 3
     
     transformed_words = [
-        create_subversion(word, num_subversions) if word in word_set else word
+        create_subversion(word) if word in word_set else word
         for word in words
     ]
     return ' '.join(transformed_words)
