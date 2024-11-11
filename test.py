@@ -18,12 +18,13 @@ def apply_subversion(word, transformation):
 
     if transformation == 'replace':
         replace_index = random.randint(0, len(word_list) - 1)
-        # Replace with neighboring character in alphabetical order or keyboard layout
-        word_list[replace_index] = chr(((ord(word_list[replace_index]) - 97 + 1) % 26) + 97)
+        # Replace with a random special character
+        word_list[replace_index] = random.choice(special_characters)
         return ''.join(word_list)
 
     elif transformation == 'add':
         add_index = random.randint(0, len(word_list))
+        # Add a random special character at a random position
         word_list.insert(add_index, random.choice(special_characters))
         return ''.join(word_list)
 
