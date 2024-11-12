@@ -1,30 +1,52 @@
 import pandas as pd
 
-def calculate_budget_statistics(pivot_df, years):
-    # Calculate max budget for each year and add it to new columns
-    for year in years:
-        pivot_df[f"max_budget_{year}"] = pivot_df[f"budget_{year}"].max(axis=1).round(2)
+# Function to retrieve a budget field based on Matter Number and column name
+def budget_fields(matter_number, column_name, dataframe_budget):
+    try:
+        value = dataframe_budget[dataframe_budget["Matter Number"] == matter_number][column_name].iloc[0]
+        return value
+    except IndexError:
+        return 0
 
-    # Calculate average budget for each year and add it to new columns
-    for i, year in enumerate(years):
-        if i == 0:
-            pivot_df[f"average_budget_{year}"] = pivot_df[f"budget_{year}"].tolist()
-        else:
-            avg_column = pivot_df[[f"budget_{years[j]}" for j in range(i+1)]].mean(axis=1).tolist()
-            pivot_df[f"average_budget_{year}"] = avg_column
+# Function to retrieve a budget field with additional year filter
+def budget_field_s(matter_number, column_name, column_name_2, year, dataframe_budget):
+    try:
+        value = dataframe_budget[
+            (dataframe_budget["Matter Number"] == matter_number) &
+            (dataframe_budget[column_name_2] == year)
+        ][column_name].iloc[0]
+        return value
+    except IndexError:
+        return "No Budget Given"
 
-    # Calculate the ratio of max budget to average budget for each year and add to new columns
-    for year in years:
-        pivot_df[f"ratio_max_average_budget_{year}"] = (
-            pivot_df[f"max_budget_{year}"] / pivot_df[f"average_budget_{year}"]
-        ).round(2)
-    
-    return pivot_df
+# Example usage of these functions:
+# Assuming you have a DataFrame called matter_budget and a list of years
 
-# Example usage
-# Assuming 'pivot_df' is the DataFrame created from the previous function
-years = [2017, 2018, 2019, 2020, 2021, 2022]  # Replace with the specific years you have
-pivot_df = calculate_budget_statistics(pivot_df, years)
+# Aggregated budget data grouped by year
+matter_budget_agg = matter_budget.groupby(["Budget Year", "Matter Number"], as_index=False)["Budget Amount"].sum()
+Matters_list = matter_budget["Matter Number"].tolist()
 
-# Display the first few rows
-print(pivot_df.head())
+# Creating last_year_budget and target_year_budget fields for each year
+for year in range(2017, 2023):  # Adjust the range as necessary
+    matter_budget[f"last_year_budget_{year}"] = matter_budget["Matter Number"].apply(
+        lambda x: budget_field_s(x, "Budget Amount", "Budget Year", year - 1, matter_budget)
+    )
+    matter_budget[f"target_year_budget_{year}"] = matter_budget["Matter Number"].apply(
+        lambda x: budget_field_s(x, "Budget Amount", "Budget Year", year, matter_budget)
+    )
+
+# Calculating additional fields for each year (e.g., average_budget and ratio_max_average_budget)
+for year in range(2017, 2023):
+    matter_budget[f"average_budget_{year}"] = matter_budget["Matter Number"].apply(
+        lambda x: (budget_field_s(x, "Budget Amount", "Budget Year", year - 1, matter_budget) +
+                   budget_field_s(x, "Budget Amount", "Budget Year", year, matter_budget)) / 2
+    )
+    matter_budget[f"ratio_max_average_budget_{year}"] = matter_budget["Matter Number"].apply(
+        lambda x: (
+            max(budget_field_s(x, "Budget Amount", "Budget Year", year, matter_budget),
+                budget_field_s(x, "Budget Amount", "Budget Year", year - 1, matter_budget))
+            /
+            ((budget_field_s(x, "Budget Amount", "Budget Year", year, matter_budget) +
+              budget_field_s(x, "Budget Amount", "Budget Year", year - 1, matter_budget)) / 2)
+        )
+    )
