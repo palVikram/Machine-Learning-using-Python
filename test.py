@@ -1,52 +1,34 @@
 import pandas as pd
 
-# Function to retrieve a budget field based on Matter Number and column name
-def budget_fields(matter_number, column_name, dataframe_budget):
-    try:
-        value = dataframe_budget[dataframe_budget["Matter Number"] == matter_number][column_name].iloc[0]
-        return value
-    except IndexError:
-        return 0
+# Assuming `matter_df`, `invoice_df`, and `budget_df` are your DataFrames for matter, invoice, and budget data
 
-# Function to retrieve a budget field with additional year filter
-def budget_field_s(matter_number, column_name, column_name_2, year, dataframe_budget):
-    try:
-        value = dataframe_budget[
-            (dataframe_budget["Matter Number"] == matter_number) &
-            (dataframe_budget[column_name_2] == year)
-        ][column_name].iloc[0]
-        return value
-    except IndexError:
-        return "No Budget Given"
+# Define the years you are working with
+years = [2017, 2018, 2019, 2020, 2021, 2022]  # Adjust based on available data
 
-# Example usage of these functions:
-# Assuming you have a DataFrame called matter_budget and a list of years
+# Initialize an empty list to store yearly merged data
+merged_data_by_year = []
 
-# Aggregated budget data grouped by year
-matter_budget_agg = matter_budget.groupby(["Budget Year", "Matter Number"], as_index=False)["Budget Amount"].sum()
-Matters_list = matter_budget["Matter Number"].tolist()
+# Loop through each year to process data for each year individually
+for year in years:
+    # Extract invoice and budget columns for the specific year
+    invoice_columns = ["Matter Number", f"invoice_cost_{year}", f"max_invoice_cost_{year}"]
+    budget_columns = ["Matter Number", f"budget_{year}", f"max_budget_{year}"]
 
-# Creating last_year_budget and target_year_budget fields for each year
-for year in range(2017, 2023):  # Adjust the range as necessary
-    matter_budget[f"last_year_budget_{year}"] = matter_budget["Matter Number"].apply(
-        lambda x: budget_field_s(x, "Budget Amount", "Budget Year", year - 1, matter_budget)
-    )
-    matter_budget[f"target_year_budget_{year}"] = matter_budget["Matter Number"].apply(
-        lambda x: budget_field_s(x, "Budget Amount", "Budget Year", year, matter_budget)
-    )
+    # Select relevant data for the current year from invoice and budget
+    invoice_data = invoice_df[invoice_columns]
+    budget_data = budget_df[budget_columns]
+    
+    # Merge matter data with invoice and budget data for the current year
+    merged_year_data = matter_df.merge(invoice_data, on="Matter Number", how="left").merge(budget_data, on="Matter Number", how="left")
+    
+    # Add a column to indicate the year for this combined data
+    merged_year_data["Year"] = year
+    
+    # Append the merged data for this year to the list
+    merged_data_by_year.append(merged_year_data)
 
-# Calculating additional fields for each year (e.g., average_budget and ratio_max_average_budget)
-for year in range(2017, 2023):
-    matter_budget[f"average_budget_{year}"] = matter_budget["Matter Number"].apply(
-        lambda x: (budget_field_s(x, "Budget Amount", "Budget Year", year - 1, matter_budget) +
-                   budget_field_s(x, "Budget Amount", "Budget Year", year, matter_budget)) / 2
-    )
-    matter_budget[f"ratio_max_average_budget_{year}"] = matter_budget["Matter Number"].apply(
-        lambda x: (
-            max(budget_field_s(x, "Budget Amount", "Budget Year", year, matter_budget),
-                budget_field_s(x, "Budget Amount", "Budget Year", year - 1, matter_budget))
-            /
-            ((budget_field_s(x, "Budget Amount", "Budget Year", year, matter_budget) +
-              budget_field_s(x, "Budget Amount", "Budget Year", year - 1, matter_budget)) / 2)
-        )
-    )
+# Concatenate all yearly data into a single DataFrame
+final_combined_df = pd.concat(merged_data_by_year, ignore_index=True)
+
+# Display the resulting combined DataFrame
+print(final_combined_df.head())
