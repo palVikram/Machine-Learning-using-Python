@@ -1,28 +1,30 @@
 import pandas as pd
 
-def process_budget_data(file_path, start_year=2017, end_year=2024):
-    # Load the data
-    matter_budget = pd.read_csv(file_path, encoding="ISO-8859-1", sep="\\t", low_memory=False)
-    
-    # Filter and sort data by each budget year within the specified range
-    budget_data_by_year = {}
-    for year in range(start_year, end_year + 1):
-        budget_data_by_year[year] = matter_budget[
-            matter_budget['Budget Year'] == year
-        ][['Matter Number', 'Action Type']].sort_values(by='Budget Year')
+def calculate_budget_statistics(pivot_df, years):
+    # Calculate max budget for each year and add it to new columns
+    for year in years:
+        pivot_df[f"max_budget_{year}"] = pivot_df[f"budget_{year}"].max(axis=1).round(2)
 
-    # Create a pivot table with the specified years as columns
-    pivot_df = matter_budget.pivot_table(index="Matter Number", columns="Budget Year", values="Budget Amount", fill_value=0)
-    
-    # Rename columns for better clarity
-    pivot_df.columns = [f'budget_{col}' for col in pivot_df.columns]
-    
-    # Reset index to flatten the table if needed
-    pivot_df = pivot_df.reset_index()
+    # Calculate average budget for each year and add it to new columns
+    for i, year in enumerate(years):
+        if i == 0:
+            pivot_df[f"average_budget_{year}"] = pivot_df[f"budget_{year}"].tolist()
+        else:
+            avg_column = pivot_df[[f"budget_{years[j]}" for j in range(i+1)]].mean(axis=1).tolist()
+            pivot_df[f"average_budget_{year}"] = avg_column
+
+    # Calculate the ratio of max budget to average budget for each year and add to new columns
+    for year in years:
+        pivot_df[f"ratio_max_average_budget_{year}"] = (
+            pivot_df[f"max_budget_{year}"] / pivot_df[f"average_budget_{year}"]
+        ).round(2)
     
     return pivot_df
 
 # Example usage
-file_path = 'Matter Budget.txt'  # Replace with the actual file path
-budget_data = process_budget_data(file_path)
-print(budget_data.head())
+# Assuming 'pivot_df' is the DataFrame created from the previous function
+years = [2017, 2018, 2019, 2020, 2021, 2022]  # Replace with the specific years you have
+pivot_df = calculate_budget_statistics(pivot_df, years)
+
+# Display the first few rows
+print(pivot_df.head())
