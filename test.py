@@ -24,12 +24,15 @@ def compute_matter_status(df_matters):
             return "Resolved"
         elif matter_number in status_dict["Reopen"].get(year, []):
             return "Reopen"
+        elif matter_number in status_dict["Closed"].get(year, []):
+            # If the matter is closed but not resolved or reopened
+            if matter_number not in status_dict["Resolved"].get(year, []) and matter_number not in status_dict["Reopen"].get(year, []):
+                return "Closed"
         elif matter_number in status_dict["Opened"].get(year, []):
             return "Open"
-        elif matter_number in status_dict["Closed"].get(year, []):
-            return "Closed"
         else:
-            return "Unknown"
+            # Return the current value in "Matter Status" if none of the above
+            return row.get("Matter Status", "Unknown")
 
     # Apply the status check function to each row
     df_matters["Matter Status"] = df_matters.apply(matter_status_check, axis=1)
