@@ -1,43 +1,53 @@
-def compute_matter_status(df_matters):
-    # Create dictionaries to store statuses for all years
-    status_dict = {
-        "Opened": {},
-        "Resolved": {},
-        "Reopen": {},
-        "Closed": {}
-    }
+import tensorflow as tf
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
 
-    # Populate the dictionaries with matter numbers for each year
-    for year in df_matters['year'].unique():
-        year_str = str(year)
-        status_dict["Opened"][year] = df_matters[df_matters['Opened On(Date)'] == year_str]['Matter Number'].tolist()
-        status_dict["Resolved"][year] = df_matters[df_matters['Resolved Date'] == year_str]['Matter Number'].tolist()
-        status_dict["Reopen"][year] = df_matters[df_matters['Reopened On(Date)'] == year_str]['Matter Number'].tolist()
-        status_dict["Closed"][year] = df_matters[df_matters['Date Closed'] == year_str]['Matter Number'].tolist()
+# Define input shape based on the number of features
+input_shape = X_scaled.shape[1]
 
-    # Define a function to determine the status of a matter based on its year
-    def matter_status_check(row):
-        year = str(row['year'])
-        matter_number = row['Matter Number']
+# Build the model
+def build_regression_model(input_shape):
+    # Input layer
+    input_layer = Input(shape=(input_shape,), name="numerical_input")
+    
+    # Dense layers with dropout
+    dense_layer = Dense(64, activation='relu', kernel_initializer='he_normal')(input_layer)
+    dense_layer = Dropout(0.2)(dense_layer)
+    dense_layer = Dense(64, activation='relu', kernel_initializer='he_normal')(dense_layer)
+    dense_layer = Dropout(0.2)(dense_layer)
+    dense_layer = Dense(32, activation='relu', kernel_initializer='he_normal')(dense_layer)
+    
+    # Output layer (single value for regression)
+    output_layer = Dense(1, activation='linear', kernel_initializer='he_normal', name="output")(dense_layer)
+    
+    # Model definition
+    model = Model(inputs=input_layer, outputs=output_layer)
+    return model
 
-        if matter_number in status_dict["Resolved"].get(year, []):
-            return "Resolved"
-        elif matter_number in status_dict["Reopen"].get(year, []):
-            return "Reopen"
-        elif matter_number in status_dict["Closed"].get(year, []):
-            # If the matter is closed but not resolved or reopened
-            if matter_number not in status_dict["Resolved"].get(year, []) and matter_number not in status_dict["Reopen"].get(year, []):
-                return "Closed"
-        elif matter_number in status_dict["Opened"].get(year, []):
-            return "Open"
-        else:
-            # Return the current value in "Matter Status" if none of the above
-            return row.get("Matter Status", "Unknown")
+# Instantiate the model
+model = build_regression_model(input_shape)
 
-    # Apply the status check function to each row
-    df_matters["Matter Status"] = df_matters.apply(matter_status_check, axis=1)
+# Compile the model
+model.compile(
+    optimizer=Adam(learning_rate=1e-3),
+    loss='mse',  # Mean Squared Error
+    metrics=['mae']  # Mean Absolute Error
+)
 
-    return df_matters
+# Print model summary
+model.summary()
 
-# Usage
-df_matters = compute_matter_status(df_matters)
+# Train the model
+history = model.fit(
+    X_scaled,
+    y_train_scaled,
+    validation_split=0.2,  # Use 20% of the data for validation
+    epochs=50,
+    batch_size=32,
+    verbose=1
+)
+
+# Evaluate the model
+results = model.evaluate(X_scaled, y_train_scaled, verbose=0)
+print(f"Loss: {results[0]}, MAE: {results[1]}")
