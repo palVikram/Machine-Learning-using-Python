@@ -51,3 +51,17 @@ history = model.fit(
 # Evaluate the model
 results = model.evaluate(X_scaled, y_train_scaled, verbose=0)
 print(f"Loss: {results[0]}, MAE: {results[1]}")
+
+
+
+from sklearn.ensemble import GradientBoostingRegressor
+
+# Train XGBoost or Gradient Boosting
+gbr = GradientBoostingRegressor()
+gbr.fit(X_train, y_train)
+
+# Combine with Neural Network Predictions
+nn_pred = model.predict(x_test_scaled)
+tree_pred = gbr.predict(X_test)
+
+final_pred = 0.5 * nn_pred.flatten() + 0.5 * tree_pred
