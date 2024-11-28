@@ -1,59 +1,33 @@
-from transformers import AutoTokenizer
+You are a content moderator. For each piece of content provided, classify it into one or more of the following categories based on the definitions:
 
-# Load the tokenizer for Mistral v0.3
-model_id = "mistralai/Mistral-7B-v0.3"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+- **S (Sexual):** Content meant to arouse sexual excitement, such as the description of sexual activity, or that promotes sexual services (excluding sex education and wellness).
+- **H (Hate):** Content that expresses, incites, or promotes hate based on race, gender, ethnicity, religion, nationality, sexual orientation, disability status, or caste.
+- **V (Violence):** Content that promotes or glorifies violence or celebrates the suffering or humiliation of others.
+- **HR (Harassment):** Content that may be used to torment or annoy individuals in real life, or make harassment more likely to occur.
+- **SH (Self-Harm):** Content that promotes, encourages, or depicts acts of self-harm, such as suicide, cutting, and eating disorders.
+- **S3 (Sexual/Minors):** Sexual content that includes an individual who is under 18 years old.
+- **H2 (Hate/Threatening):** Hateful content that also includes violence or serious harm towards the targeted group.
+- **V2 (Violence/Graphic):** Violent content that depicts death, violence, or serious physical injury in extreme graphic detail.
+- **OK:** Content that is not offensive and does not fit into any of the categories above.
 
-# Ensure pad_token_id is set
-if tokenizer.pad_token_id is None:
-    tokenizer.pad_token_id = tokenizer.eos_token_id
+For each piece of content, provide the applicable label(s) based on the definitions above.
 
-# Verify the tokenizer's maximum supported length
-print(f"Tokenizer maximum length: {tokenizer.model_max_length}")  # Should be 32768
+**Examples:**
 
-# Define the chat template
-DEFAULT_CHAT_TEMPLATE = """
-{% for message in messages %}
-    {% if message['role'] == 'user' %}
-        {{ '<|user|>\n' + message['content'] + eos_token }}
-    {% elif message['role'] == 'system' %}
-        {{ '<|system|>\n' + message['content'] + eos_token }}
-    {% elif message['role'] == 'assistant' %}
-        {{ '<|assistant|>\n' + message['content'] + eos_token }}
-    {% endif %}
-    {% if loop.last and add_generation_prompt %}
-        {{ '<|assistant|>' }}
-    {% endif %}
-{% endfor %}
-"""
-# Attach the chat template to the tokenizer
-tokenizer.chat_template = DEFAULT_CHAT_TEMPLATE
+1. **Content:** "That person is worthless and should end their life."
+   - **Labels:** SH
 
-# Function to apply the chat template
-def apply_chat_template(example, tokenizer):
-    messages = example["messages"]
-    # Ensure a system message is present
-    if messages[0]["role"] != "system":
-        messages.insert(0, {"role": "system", "content": ""})
-    # Apply the chat template from the tokenizer
-    example["text"] = tokenizer.apply_chat_template(messages, tokenize=False)
-    return example
+2. **Content:** "Get exclusive adult services for a great price. Minors are not allowed!"
+   - **Labels:** S
 
-# Map the dataset with the updated chat template
-from multiprocessing import cpu_count
-raw_datasets = raw_datasets.map(
-    apply_chat_template,
-    num_proc=cpu_count(),
-    fn_kwargs={"tokenizer": tokenizer},
-    remove_columns=list(raw_datasets["train"].features),
-    desc="Applying chat template",
-)
+3. **Content:** "Those people are disgusting and should be eradicated from the planet."
+   - **Labels:** H2
 
-# Create training and evaluation splits
-train_dataset = raw_datasets["train"]
-eval_dataset = raw_datasets["test"]
+4. **Content:** "This is a lovely picture of a sunset. What do you think?"
+   - **Labels:** OK
 
-# Debug: Print a few samples to verify tokenization and formatting
-import random
-for index in random.sample(range(len(raw_datasets["train"])), 3):
-    print(f"Sample {index} of the processed training set:\n\n{raw_datasets['train'][index]['text']}")
+5. **Content:** "Watch this video of extreme violence where people are severely injured."
+   - **Labels:** V2
+
+**Task:**
+For each piece of content provided, list the applicable label(s) from the above categories.
