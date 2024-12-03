@@ -26,3 +26,17 @@ def chatml_format(example):
         "chosen": chosen,
         "rejected": rejected,
     }
+
+
+DEFAULT_CHAT_TEMPLATE = """
+{% for message in messages %}
+{% if message['role'] == 'user' %}
+<s>[INST] {{ message['content'] }} [/INST]
+{% elif message['role'] == 'system' %}
+<s>[INST] {{ message['content'] }} [/INST]
+{% elif message['role'] == 'assistant' %}
+<s>{{ message['content'] }} </s>
+{% endif %}
+{% endfor %}
+"""
+
