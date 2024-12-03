@@ -1,29 +1,28 @@
-# Specify the model
-model_name = "mistralai/Mistral-7B-Instruct-v0.3"
-
-# Tokenizer
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = "left"
-
-# Dataset formatting
 def chatml_format(example):
-    # Format system
-    system_message = {"role": "system", "content": example['system']}
-    user_message = {"role": "user", "content": example['question']}
-    
-    # Prompt creation
-    system = tokenizer.apply_chat_template([system_message], tokenize=False) if example['system'] else ""
-    prompt = tokenizer.apply_chat_template([user_message], tokenize=False, add_generation_prompt=True)
-    
-    # Chosen and rejected responses
-    chosen = example['chosen'] + "<|im_end|>\n"
-    rejected = example['rejected'] + "<|im_end|>\n"
-    
-    return {"prompt": system + prompt, "chosen": chosen, "rejected": rejected}
+    """
+    Formats a dataset example for Mistral-7B-Instruct-v0.3 using <s>[INST] [/INST] tokens.
 
-# Load dataset
-dataset = load_dataset("Intel/orca_dpo_pairs")['train']
+    Args:
+        example (dict): A dictionary with keys 'system', 'question', 'chosen', and 'rejected'.
 
-# Format dataset
-formatted_dataset = dataset.map(chatml_format, remove_columns=dataset.column_names)
+    Returns:
+        dict: A dictionary with 'prompt', 'chosen', and 'rejected' formatted for the model.
+    """
+    # Format the system message
+    system_message = f"<s>[INST] {example['system']} [/INST] " if example.get('system') else ""
+
+    # Format the user's question
+    user_message = f"<s>[INST] {example['question']} [/INST] "
+
+    # Combine system and user messages
+    prompt = system_message + user_message
+
+    # Format chosen and rejected responses
+    chosen = f"{example['chosen']} </s>"
+    rejected = f"{example['rejected']} </s>"
+
+    return {
+        "prompt": prompt,
+        "chosen": chosen,
+        "rejected": rejected,
+    }
