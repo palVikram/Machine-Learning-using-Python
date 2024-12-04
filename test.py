@@ -1,42 +1,9 @@
-def chatml_format(example):
-    """
-    Formats a dataset example for Mistral-7B-Instruct-v0.3 using <s>[INST] [/INST] tokens.
+Introduction:
+The objective of this project is to develop a scalable and adaptable solution for content moderation that can address diverse prompt definitions tailored to specific client requirements. The aim is to build a real-time classifier capable of processing and categorizing various types of prompts or policies (e.g., violence, hate speech) for a single topic, thereby enabling proactive and effective content moderation across platforms.
 
-    Args:
-        example (dict): A dictionary with keys 'system', 'question', 'chosen', and 'rejected'.
+Problem Statement:
+The Mistral 7B model, with 7 billion parameters in FP16 (half-precision), has a substantial model size of 15 GB, where each parameter requires 2 bytes of memory. This poses challenges in terms of efficient deployment and resource utilization.
 
-    Returns:
-        dict: A dictionary with 'prompt', 'chosen', and 'rejected' formatted for the model.
-    """
-    # Format the system message
-    system_message = f"<s>[INST] {example['system']} [/INST] " if example.get('system') else ""
+High inference latency is a critical concern, as the current latency levels are unsuitable for proactive content moderation tasks. The target latency for real-time classification needs to be under 100 milliseconds.
 
-    # Format the user's question
-    user_message = f"<s>[INST] {example['question']} [/INST] "
-
-    # Combine system and user messages
-    prompt = system_message + user_message
-
-    # Format chosen and rejected responses
-    chosen = f"{example['chosen']} </s>"
-    rejected = f"{example['rejected']} </s>"
-
-    return {
-        "prompt": prompt,
-        "chosen": chosen,
-        "rejected": rejected,
-    }
-
-
-DEFAULT_CHAT_TEMPLATE = """
-{% for message in messages %}
-{% if message['role'] == 'user' %}
-<s>[INST] {{ message['content'] }} [/INST]
-{% elif message['role'] == 'system' %}
-<s>[INST] {{ message['content'] }} [/INST]
-{% elif message['role'] == 'assistant' %}
-<s>{{ message['content'] }} </s>
-{% endif %}
-{% endfor %}
-"""
-
+Handling large prompt input tokens efficiently is crucial to maintain accuracy and responsiveness in content classification.
