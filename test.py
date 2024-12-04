@@ -1,9 +1,12 @@
-Introduction:
-The objective of this project is to develop a scalable and adaptable solution for content moderation that can address diverse prompt definitions tailored to specific client requirements. The aim is to build a real-time classifier capable of processing and categorizing various types of prompts or policies (e.g., violence, hate speech) for a single topic, thereby enabling proactive and effective content moderation across platforms.
+QLoRA:
+Low-Rank Adapters (LoRA):
+Fine-tunes small, trainable parameters (adapters) while keeping the main model frozen. This allows efficient adaptation to specific tasks without retraining the entire model.
 
-Problem Statement:
-The Mistral 7B model, with 7 billion parameters in FP16 (half-precision), has a substantial model size of 15 GB, where each parameter requires 2 bytes of memory. This poses challenges in terms of efficient deployment and resource utilization.
+4-bit Normal Float (NF4) Quantization:
+Optimally compresses model weights, significantly minimizing memory usage without compromising precision.
 
-High inference latency is a critical concern, as the current latency levels are unsuitable for proactive content moderation tasks. The target latency for real-time classification needs to be under 100 milliseconds.
+Double Quantization:
+Further compresses quantization constants, reducing the need for additional memory and enhancing storage efficiency.
 
-Handling large prompt input tokens efficiently is crucial to maintain accuracy and responsiveness in content classification.
+Paged Optimizers:
+Ensures efficient memory management by preventing out-of-memory errors, particularly during data spikes.
