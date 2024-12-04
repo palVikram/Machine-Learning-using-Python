@@ -1,60 +1,155 @@
 import pandas as pd
 import numpy as np
 import logging
+import warnings
+import pickle
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+
+# Ignore warnings for cleaner logs
+warnings.filterwarnings("ignore")
 
 # Configure logging
 logging.basicConfig(
-    filename="matter_processing.log",
+    filename="invoice_cost_prediction.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Function to load data
-def load_data(filepath, chunksize=None, sep='^', encoding='ISO-8859-1'):
+# Import custom utility functions
+from process_invoice import (
+    process_data,
+    calculate_statistics,
+    check_action_type,
+    budget_calculation,
+    invoice_calculation,
+    budget_end_date,
+    budget_length,
+    check_lifetime_invoice_cost,
+    check_lifetime_budget,
+    read_pickle_file,
+    merge_matter_invoice_budget,
+    conversion_rate
+)
+
+# Load pickled resources
+def load_pickle_file(filepath):
     try:
-        if chunksize:
-            logging.info(f"Loading data from {filepath} in chunks.")
-            data = pd.DataFrame()
-            for chunk in pd.read_csv(filepath, chunksize=chunksize, sep=sep, encoding=encoding, low_memory=False):
-                data = pd.concat([data, chunk], ignore_index=True)
-            return data
-        else:
-            logging.info(f"Loading data from {filepath}.")
-            return pd.read_csv(filepath, sep=sep, encoding=encoding, low_memory=False)
+        logging.info(f"Loading pickled file from {filepath}.")
+        with open(filepath, "rb") as file:
+            return pickle.load(file)
     except Exception as e:
-        logging.error(f"Error loading data from {filepath}: {str(e)}")
+        logging.error(f"Error loading pickled file from {filepath}: {str(e)}")
         raise
 
-# Function to preprocess data
-def preprocess_data(df):
+# File paths
+scaler_filepath = '/mnt/data/legal/matter_data/invoice_cost_prediction/scaler.pkl'
+categorical_columns_map_filepath = '/mnt/data/legal/matter_data/invoice_cost_prediction/categorical_columns_map.pkl'
+scaler_target_filepath = '/mnt/data/legal/matter_data/invoice_cost_prediction/scaler_target.pkl'
+model_filepath = '/mnt/data/legal/matter_data/invoice_cost_prediction/model.pkl'
+
+# Load resources
+scaler = load_pickle_file(scaler_filepath)
+categorical_columns_map = load_pickle_file(categorical_columns_map_filepath)
+scaler_target = load_pickle_file(scaler_target_filepath)
+model = load_pickle_file(model_filepath)
+
+# Define date range for processing
+data_start_date = 2022
+data_end_date = 2023
+
+# Chunk size for large file processing
+chunk_size = 100000
+
+# Main pipeline
+def main():
     try:
-        logging.info("Starting data preprocessing.")
-        
-        # Filtering data
-        df = df[df["Matter Type"] != "Product Liability"]
-        df["Matter_Country_State"] = (
-            df["Matter Country Cd"].astype(str) + ":" + df["Matter State Name"].astype(str)
-        )
-        
-        # Adding calculated fields
-        df["Matter Ages"] = (
-            df["Budget_Year"].astype(int) - df["Opened On (Date)"].astype(int) + 1
-        )
-        df["created_year"] = pd.to_datetime(df["Matter Created Date"], errors="coerce").dt.year
-        df["created_month"] = pd.to_datetime(df["Matter Created Date"], errors="coerce").dt.month
-        
-        # Fixing missing values
-        df["Matter Status"] = df["Matter Status"].replace("?", "Open").replace("Closed", "Open")
-        df["Matter_Country_State"] = df["Matter_Country_State"].replace(0, "Not Given")
-        
-        logging.info("Data preprocessing completed successfully.")
-        return df
+        logging.info("Starting the invoice cost prediction pipeline.")
+
+        # Filepaths for datasets
+        matters_filepath = "/mnt/data/legal/matter_data/Matters.txt"
+        budget_filepath = "/mnt/data/legal/matter_data/Matter Budget.txt"
+        invoice_filepath = "/mnt/data/legal/invoice_data/Invoiceheaders_remove_lineend.txt"
+
+        # Load datasets
+        matters = pd.DataFrame()
+        for chunk in pd.read_csv(matters_filepath, chunksize=chunk_size, sep='^', encoding='ISO-8859-1', low_memory=False):
+            matters = pd.concat([matters, chunk], ignore_index=True)
+
+        matter_budget = pd.read_csv(budget_filepath, sep='^', encoding='ISO-8859-1', low_memory=False)
+        invoice_header = pd.read_csv(invoice_filepath, sep='^', encoding='ISO-8859-1', low_memory=False)
+
+        logging.info("Datasets loaded successfully.")
+
+        # Preprocess data
+        matters = process_data(matters)
+        matter_budget = process_data(matter_budget)
+        invoice_header = process_data(invoice_header)
+
+        # Add derived columns
+        matters["Action_Type"] = matters["Matter Number"].apply(lambda x: check_action_type(matter_budget, x))
+
+        # Merge datasets
+        final_combined_df = merge_matter_invoice_budget(data_start_date, invoice_header, matter_budget, matters)
+
+        # Add budget and invoice calculations
+        final_combined_df["Target_year_budget"] = final_combined_df.apply(lambda x: budget_calculation(x, matter_budget), axis=1)
+        final_combined_df["Invoice_Calculated"] = final_combined_df.apply(lambda x: invoice_calculation(x, invoice_header), axis=1)
+
+        # Add additional metrics
+        final_combined_df["budget_length"] = final_combined_df.apply(budget_length, axis=1)
+        final_combined_df["Lifetime_Invoice_Validated"] = final_combined_df.apply(lambda x: check_lifetime_invoice_cost(x), axis=1)
+        final_combined_df["Lifetime_Budget_Validated"] = final_combined_df.apply(lambda x: check_lifetime_budget(x), axis=1)
+
+        # Apply conversion rates
+        final_combined_df["Invoice_Total_Converted"] = final_combined_df["Invoice Total"].apply(lambda x: conversion_rate(x))
+
+        # Prepare test data
+        test = final_combined_df[final_combined_df["type"] == "test"]
+        X_test = test.drop("Target_year", axis=1)
+        y_test = test["Target_year"]
+
+        # Encode categorical columns
+        categorical_columns = [
+            'Subject Area', 'Matter Type', 'J&J Role', 'Cost Center Sector',
+            'Action Type', 'Matter_Country_State', 'J&J Reporting Client Sector', 'Matter Status'
+        ]
+        X_test = encode_categorical_columns(X_test, "Target_year", categorical_columns)
+
+        # Scale numerical data
+        numerical_columns = [
+            'lifetime_budget', 'lifetime_invoice_cost', 'max_budget', 'average_budget',
+            'ratio_max_average_invoice_cost', 'last_year_budget', 'last_year_invoice_cost',
+            'Subject Area_Encoded', 'Matter Type_Encoded', 'J&J Role_Encoded',
+            'Cost Center Sector_Encoded', 'Matter_Country_State_Encoded',
+            'J&J Reporting Client Sector_Encoded', 'Matter Status_Encoded'
+        ]
+        X_numerical_test = X_test[numerical_columns]
+        X_test_scaled = scale_data(scaler, X_numerical_test)
+
+        # Make predictions
+        y_pred = predict_model(model, X_test_scaled, scaler_target)
+
+        # Evaluate predictions
+        r2 = r2_score(y_test, y_pred)
+        mse = mean_squared_error(y_test, y_pred)
+        logging.info(f"Model evaluation completed. R2 Score: {r2}, MSE: {mse}")
+        print(f"R2 Score: {r2}, MSE: {mse}")
+
+        # Visualize results
+        plt.scatter(y_test, y_pred)
+        plt.xlabel("Actual Values")
+        plt.ylabel("Predicted Values")
+        plt.title("Actual vs Predicted")
+        plt.show()
+
+        logging.info("Invoice cost prediction pipeline completed successfully.")
     except Exception as e:
-        logging.error(f"Error during data preprocessing: {str(e)}")
+        logging.error(f"Error in main pipeline: {str(e)}")
         raise
 
-# Function to encode categorical columns
+# Helper functions
 def encode_categorical_columns(df, target_column, categorical_columns):
     try:
         logging.info("Encoding categorical columns.")
@@ -68,18 +163,14 @@ def encode_categorical_columns(df, target_column, categorical_columns):
         logging.error(f"Error encoding categorical columns: {str(e)}")
         raise
 
-# Function to scale numerical data
-def scale_data(scaler, df, columns):
+def scale_data(scaler, df):
     try:
         logging.info("Scaling numerical data.")
-        scaled_data = scaler.transform(df[columns])
-        logging.info("Numerical data scaled successfully.")
-        return scaled_data
+        return scaler.transform(df)
     except Exception as e:
         logging.error(f"Error scaling numerical data: {str(e)}")
         raise
 
-# Function to make predictions
 def predict_model(model, X_test_scaled, scaler_target):
     try:
         logging.info("Making predictions.")
@@ -89,60 +180,6 @@ def predict_model(model, X_test_scaled, scaler_target):
         return y_pred
     except Exception as e:
         logging.error(f"Error during prediction: {str(e)}")
-        raise
-
-# Main function
-def main():
-    try:
-        # Load data
-        logging.info("Starting the data processing pipeline.")
-        matters_filepath = "/mnt/data/legal/matter_data/Matters.txt"
-        budget_filepath = "/mnt/data/legal/matter_data/Matter Budget.txt"
-        invoice_filepath = "/mnt/data/legal/invoice_data/Invoiceheaders_remove_lineend.txt"
-
-        matters = load_data(matters_filepath, chunksize=1000)
-        matter_budget = load_data(budget_filepath)
-        invoice_header = load_data(invoice_filepath)
-
-        # Preprocess data
-        matters = preprocess_data(matters)
-
-        # Prepare test data
-        test = matters[matters["type"] == "test"]
-        X_test = test.drop("Target_year", axis=1)
-        y_test = test["Target_year"]
-
-        # Encode categorical columns
-        categorical_columns = [
-            'Subject Area', 'Matter Type', 'J&J Role', 'Cost Center Sector', 
-            'Action Type', 'Matter_Country_State', 'J&J Reporting Client Sector', 'Matter Status'
-        ]
-        X_test["Matter_Country_State"] = X_test["Matter_Country_State"].replace([np.inf, -np.inf], "Not Given")
-        X_test = encode_categorical_columns(X_test, "Target_year", categorical_columns)
-
-        # Scale numerical data
-        numerical_columns = [
-            'lifetime_budget', 'lifetime_invoice_cost', 'max_budget', 'average_budget', 
-            'ratio_max_average_invoice_cost', 'last_year_budget', 'last_year_invoice_cost',
-            'Subject Area_Encoded', 'Matter Type_Encoded', 'J&J Role_Encoded',
-            'Cost Center Sector_Encoded', 'Matter_Country_State_Encoded', 
-            'J&J Reporting Client Sector_Encoded', 'Matter Status_Encoded'
-        ]
-        scaler = StandardScaler()
-        X_test_scaled = scale_data(scaler, X_test, numerical_columns)
-
-        # Load pre-trained model and scaler for the target
-        # Example: Replace with actual model and scaler
-        model = None  # Load your model here
-        scaler_target = None  # Load your target scaler here
-
-        # Make predictions
-        y_pred = predict_model(model, X_test_scaled, scaler_target)
-        print("Predictions:", y_pred)
-
-        logging.info("Data processing pipeline completed successfully.")
-    except Exception as e:
-        logging.error(f"Error in main pipeline: {str(e)}")
         raise
 
 # Entry point
